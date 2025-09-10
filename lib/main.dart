@@ -1,10 +1,13 @@
 import 'package:chatting_app/firebase_options.dart';
+import 'package:chatting_app/provider/firebase_auth_provider.dart';
 import 'package:chatting_app/provider/shared_preference_provider.dart';
 import 'package:chatting_app/screens/chat_screen.dart';
 import 'package:chatting_app/screens/login_screen.dart';
 import 'package:chatting_app/screens/register_screen.dart';
+import 'package:chatting_app/services/firebase_auth_service.dart';
 import 'package:chatting_app/services/shared_preferences_service.dart';
 import 'package:chatting_app/static/screen_route.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -17,9 +20,13 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-
+  final firebaseAuth = FirebaseAuth.instance;
   runApp(MultiProvider(
     providers: [
+      Provider(create: (context) => FirebaseAuthService(firebaseAuth)),
+      ChangeNotifierProvider(create: (context) => FirebaseAuthProvider(
+        context.read<FirebaseAuthService>(),
+      )),
       Provider(
         create: (context) => SharedPreferencesService(pref),
       ),
