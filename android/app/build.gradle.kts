@@ -48,6 +48,6 @@ flutter {
 }
 
 dependencies {
-    implementation "androidx.multidex:multidex:2.0.1"
+    implementation("androidx.multidex:multidex:2.0.1")
     implementation(platform("org.jetbrains.kotlin:kotlin-bom:1.8.0"))
 }
