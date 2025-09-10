@@ -1,4 +1,6 @@
+import 'package:chatting_app/provider/firebase_auth_provider.dart';
 import 'package:chatting_app/provider/shared_preference_provider.dart';
+import 'package:chatting_app/static/firebase_auth_status.dart';
 import 'package:chatting_app/static/screen_route.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -20,11 +22,20 @@ class _ChatScreenState extends State<ChatScreen> {
       appBar: AppBar(
         title: const Text('Chat Room'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.close),
-            tooltip: 'Logout',
-            onPressed: () => _tapToSignOut(),
-          )
+          Consumer<FirebaseAuthProvider>(
+            builder: (context, value, child) {
+              return switch (value.authStatus) {
+                FirebaseAuthStatus.signingOut => const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                _ => IconButton(
+                    icon: const Icon(Icons.close),
+                    tooltip: 'Logout',
+                    onPressed: () => _tapToSignOut(),
+                  ),
+              };
+            },
+          ),
         ],
       ),
       body: Padding(
@@ -71,15 +82,22 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _tapToSignOut() async {
+    // todo-03-action-05: sign out the account
     final sharedPreferenceProvider = context.read<SharedPreferenceProvider>();
-    await sharedPreferenceProvider.logout();
+    final firebaseAuthProvider = context.read<FirebaseAuthProvider>();
+    final navigator = Navigator.of(context);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
 
-    if (mounted) {
-      Navigator.pushReplacementNamed(
-        context,
+    await firebaseAuthProvider.signOutUser().then((value) async {
+      await sharedPreferenceProvider.logout();
+      navigator.pushReplacementNamed(
         ScreenRoute.login.name,
       );
-    }
+    }).whenComplete(() {
+      scaffoldMessenger.showSnackBar(SnackBar(
+        content: Text(firebaseAuthProvider.message ?? ""),
+      ));
+    });
   }
 
   void _sendMessage() async {}

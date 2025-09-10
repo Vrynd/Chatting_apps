@@ -60,7 +60,7 @@ class FirebaseAuthProvider extends ChangeNotifier {
   }
 
   // LogOut Akun
-  Future signOutUser(String email, String password) async {
+  Future signOutUser() async {
     try {
       _authStatus = FirebaseAuthStatus.signingOut;
       notifyListeners();

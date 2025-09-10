@@ -1,4 +1,6 @@
+import 'package:chatting_app/provider/firebase_auth_provider.dart';
 import 'package:chatting_app/provider/shared_preference_provider.dart';
+import 'package:chatting_app/static/firebase_auth_status.dart';
 import 'package:chatting_app/static/screen_route.dart';
 import 'package:chatting_app/widgets/textfield_obsecure_widget.dart';
 import 'package:flutter/material.dart';
@@ -46,10 +48,17 @@ class _LoginScreenState extends State<LoginScreen> {
               hintText: 'Password',
             ),
             const SizedBox(height: 24.0),
-            FilledButton(
-              onPressed: () => _tapToLogin(),
-              child: const Text('Login'),
-            ),
+            Consumer<FirebaseAuthProvider>(builder: (context, value, child) {
+              return switch (value.authStatus) {
+                FirebaseAuthStatus.authenticating => const Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                _ => FilledButton(
+                    onPressed: () => _tapToLogin(),
+                    child: const Text('Login'),
+                  ),
+              };
+            }),
             const SizedBox.square(dimension: 16),
             GestureDetector(
               child: const Text(
@@ -68,11 +77,13 @@ class _LoginScreenState extends State<LoginScreen> {
   void initState() {
     super.initState();
 
+    final firebaseAuth = context.read<FirebaseAuthProvider>();
     final navigator = Navigator.of(context);
     final isLogin = context.read<SharedPreferenceProvider>().isLogin;
 
-    Future.microtask(() {
+    Future.microtask(() async {
       if (isLogin) {
+        await firebaseAuth.updateProfile();
         navigator.pushReplacementNamed(
           ScreenRoute.chat.name,
         );
@@ -81,14 +92,34 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _tapToLogin() async {
-    final sharedPreferenceProvider = context.read<SharedPreferenceProvider>();
-    await sharedPreferenceProvider.login();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
 
-    if (mounted) {
-      Navigator.pushReplacementNamed(
-        context,
-        ScreenRoute.chat.name,
-      );
+    if (email.isNotEmpty && password.isNotEmpty) {
+      final sharedPreferenceProvider = context.read<SharedPreferenceProvider>();
+      final firebaseAuthProvider = context.read<FirebaseAuthProvider>();
+      final navigator = Navigator.of(context);
+      final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+      await firebaseAuthProvider.signInUser(email, password);
+      switch (firebaseAuthProvider.authStatus) {
+        case FirebaseAuthStatus.authenticated:
+          await sharedPreferenceProvider.login();
+          navigator.pushReplacementNamed(
+            ScreenRoute.chat.name,
+          );
+        case _:
+          scaffoldMessenger.showSnackBar(SnackBar(
+            content: Text(firebaseAuthProvider.message ?? ""),
+          ));
+      }
+    } else {
+      const message = "Fill the email and password correctly";
+
+      final scaffoldMessenger = ScaffoldMessenger.of(context);
+      scaffoldMessenger.showSnackBar(const SnackBar(
+        content: Text(message),
+      ));
     }
   }
 
